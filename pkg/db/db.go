@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/jotafauzanh/scalabe-coupon-excercise/internal/model"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -20,11 +21,17 @@ func ConnectDatabase() {
 	dbname := os.Getenv("DB_NAME")
 	port := os.Getenv("DB_PORT")
 
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai", host, user, password, dbname, port)
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Jakarta", host, user, password, dbname, port)
 
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Failed to connect to database!", err)
+	}
+
+	// Auto-migrate the schema
+	err = DB.AutoMigrate(&model.Coupon{}, &model.CouponClaims{}, &model.User{})
+	if err != nil {
+		log.Fatal("Failed to migrate database!", err)
 	}
 
 	log.Println("Database connection established")

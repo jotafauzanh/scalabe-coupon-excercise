@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
@@ -7,15 +7,13 @@ WORKDIR /app
 RUN apk add --no-cache git
 
 COPY go.mod ./
+
 # Copy go.sum if it exists, otherwise we will generate it
-# COPY go.sum ./ 
-# In this environment, go.sum checks might fail if we don't have it yet, 
-# so we'll run tidy.
+# COPY go.sum ./
 
 COPY . .
 
-# We run mod tidy here because we just added postgres dependency in the code
-# but haven't updated go.mod in the host environment yet.
+# Make sure deps are ready
 RUN go mod tidy
 
 RUN go build -o main cmd/server/main.go

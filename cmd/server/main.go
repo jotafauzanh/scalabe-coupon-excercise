@@ -4,16 +4,17 @@ import (
 	"log"
 
 	"github.com/jotafauzanh/scalabe-coupon-excercise/internal/api"
-	"github.com/jotafauzanh/scalabe-coupon-excercise/internal/model"
 	"github.com/jotafauzanh/scalabe-coupon-excercise/pkg/db"
+	"github.com/jotafauzanh/scalabe-coupon-excercise/pkg/redis"
 )
 
 func main() {
+	log.Println("Server is starting...")
 	// Connect to database
 	db.ConnectDatabase()
 
-	// Migrate the schema
-	db.DB.AutoMigrate(&model.User{})
+	// Connect to Redis
+	redis.ConnectRedis()
 
 	// Setup router
 	r := api.SetupRouter()
