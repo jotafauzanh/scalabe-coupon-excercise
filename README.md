@@ -45,7 +45,7 @@ Then, there are three locust instances:
 
 ### Flash Sale Scenario
 
-After running docker compose, open localhost:8089. The tests are already setup, you'd only need to press "START".
+After running `docker-compose up --build` and waiting for everything to load, open localhost:8089. The tests are already setup, you'd only need to press "START".
 
 You can see the test running on both the web ui and docker compose CLI.
 
@@ -53,7 +53,7 @@ Then you can see the final coupon information on the logs. Go to the logs tab an
 
 ### Flash Sale Scenario
 
-After running docker compose, open localhost:8090. The tests are already setup, you'd only need to press "START".
+After running `docker-compose up --build` and waiting for everything to load, open localhost:8090. The tests are already setup, you'd only need to press "START".
 
 You can see the test running on both the web ui and docker compose CLI.
 
