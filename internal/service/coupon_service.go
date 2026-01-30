@@ -57,7 +57,23 @@ func (s *CouponService) CreateCoupon(ctx context.Context, req *CreateCouponReque
 }
 
 func (s *CouponService) ClaimCoupon(ctx context.Context, req *ClaimCouponRequest) error {
-	return s.repo.ClaimCoupon(ctx, req.UserID, req.CouponName)
+	err := s.repo.ClaimCoupon(ctx, req.UserID, req.CouponName)
+	if err == nil {
+		return nil
+	}
+
+	// Quick fix error handling at controller
+	if errors.Is(err, repository.ErrCouponNotFound) {
+		return ErrCouponNotFound
+	}
+	if errors.Is(err, repository.ErrAlreadyClaimed) {
+		return ErrAlreadyClaimed
+	}
+	if errors.Is(err, repository.ErrNoStock) {
+		return ErrNoStock
+	}
+
+	return err
 }
 
 func (s *CouponService) GetCouponDetails(ctx context.Context, name string) (*CouponDetailsResponse, error) {

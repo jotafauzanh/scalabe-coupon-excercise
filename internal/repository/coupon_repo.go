@@ -70,17 +70,32 @@ func (r *CouponRepository) GetCouponByName(ctx context.Context, name string) (*m
 }
 
 func (r *CouponRepository) ClaimCoupon(ctx context.Context, userID string, couponName string) error {
-	// Use Redis distributed lock for this coupon claim operation
-	lockKey := fmt.Sprintf("coupon_claim:%s:%s", couponName, userID)
+	// Use Redis distributed lock for this coupon claim operation.
+	// The lock is taken per coupon, and concurrent claim attempts for the same
+	// coupon will wait until the lock becomes available (queue-like behavior).
+
+	// DISADVATAGE: CMIIW but this would result in a random process order, instead of sequentially from request order.
+	// in other words, not a strict FIFO.
+
+	lockKey := fmt.Sprintf("coupon_claim:%s", couponName)
 	lockValue := fmt.Sprintf("%d", time.Now().UnixNano())
 
-	// Try to acquire lock with SET NX EX
-	acquired, err := r.redis.SetNX(ctx, lockKey, lockValue, 30*time.Second).Result()
-	if err != nil {
-		return err
-	}
-	if !acquired {
-		return errors.New("operation already in progress")
+	// Try to acquire lock with SET NX EX, waiting while another claim is in progress.
+	for {
+		acquired, err := r.redis.SetNX(ctx, lockKey, lockValue, 30*time.Second).Result()
+		if err != nil {
+			return err
+		}
+		if acquired {
+			break
+		}
+
+		// Wait a short period before retrying, or exit if the context is done.
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(50 * time.Millisecond):
+		}
 	}
 
 	// Ensure lock is released
@@ -124,7 +139,7 @@ func (r *CouponRepository) ClaimCoupon(ctx context.Context, userID string, coupo
 
 		// Check if user already claimed this coupon
 		var existingClaim model.CouponClaims
-		err := tx.WithContext(ctx).Where("coupon_id = ? AND user_id = ?", coupon.ID, user.ID).
+		err := tx.WithContext(ctx).Where("coupon_id = ? AND user_id = ?", coupon.ID, user.UserID).
 			First(&existingClaim).Error
 		if err == nil {
 			return ErrAlreadyClaimed
@@ -136,7 +151,7 @@ func (r *CouponRepository) ClaimCoupon(ctx context.Context, userID string, coupo
 		// Create the claim
 		claim := &model.CouponClaims{
 			CouponID: coupon.ID,
-			UserID:   user.ID,
+			UserID:   user.UserID,
 		}
 		if err := tx.WithContext(ctx).Create(claim).Error; err != nil {
 			return err

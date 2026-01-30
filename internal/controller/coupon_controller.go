@@ -94,9 +94,13 @@ func (c *CouponController) CreateCouponClaim(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "coupon claimed successfully"})
 }
 
-// GetCoupon - GET /api/coupons/{name}
+// GetCoupon - GET /api/coupons?name={name} or /api/coupons/{name}
 func (c *CouponController) GetCoupon(ctx *gin.Context) {
+	// not sure which one is preferred based on the requirements, so i supported both
 	name := ctx.Param("name")
+	if name == "" {
+		name = ctx.Query("name")
+	}
 	if name == "" {
 		ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: "coupon name is required"})
 		return

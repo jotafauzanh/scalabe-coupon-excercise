@@ -32,7 +32,9 @@ func SetupRouter() *gin.Engine {
 		// Coupons
 		v1.POST("/coupons", couponController.CreateCoupon)
 		v1.POST("/coupons/claim", couponController.CreateCouponClaim)
-		v1.GET("/coupons/:id", couponController.GetCoupon)
+		// not sure which one is preferred based on the requirements, so i supported both
+		v1.GET("/coupons", couponController.GetCoupon)
+		v1.GET("/coupons/:name", couponController.GetCoupon)
 
 		// DEV
 		v1.GET("/health", devController.HealthCheck)

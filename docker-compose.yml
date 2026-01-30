@@ -3,11 +3,11 @@ version: '3.8'
 services:
   app:
     # PROD build
-    # build: .
+    build: .
     # DEV build for faster iteration
-    build:
-      context: .
-      dockerfile: dockerfile-dev/Dockerfile
+    # build:
+    #   context: .
+    #   dockerfile: dockerfile-dev/Dockerfile
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -19,26 +19,84 @@ services:
       - DB_PORT=5432
       - REDIS_ADDR=redis:6379
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/health || exit 1"]
+      interval: 60s
+      timeout: 2s
+      retries: 20
+      start_period: 2s
 
   db:
-    image: postgres:15-alpine
+    # image: postgres:15-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.db
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=scalabe-coupon-excercise_db
+      TZ: Asia/Jakarta
+      PGTZ: Asia/Jakarta
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: scalabe-coupon-excercise_db
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # test: ["CMD-SHELL", "psql -U postgres -p postgres -d scalabe-coupon-excercise_db -c 'SELECT 1' || exit 1"] // may not work if no tables yet, so this is scrapped
+      # test: ["CMD-SHELL", "sh -c 'pg_isready -U postgres -d postgres'"] // Always gives success? near useless
+      test: ["CMD-SHELL", "pg_isready -U postgres -d scalabe-coupon-excercise_db || exit 1"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+      start_period: 2s
+
 
   redis:
     image: redis:alpine
     restart: unless-stopped
     ports:
       - "6379:6379"
+
+  locust-flash-sale:
+    image: locustio/locust:master
+    restart: unless-stopped
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./locust-flash-sale:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --host http://app:8080
+    depends_on:
+      app:
+        condition: service_healthy
+
+  locust-double-dip:
+    image: locustio/locust:master
+    restart: unless-stopped
+    ports:
+      - "8090:8089"
+    volumes:
+      - ./locust-double-dip:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --host http://app:8080
+    depends_on:
+      app:
+        condition: service_healthy
+
+  locust-health:
+    image: locustio/locust:master
+    restart: unless-stopped
+    ports:
+      - "8091:8089"
+    volumes:
+      - ./locust-health:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --host http://app:8080
+    depends_on:
+      app:
+        condition: service_healthy
 
 volumes:
   postgres_data:
