@@ -58,3 +58,15 @@ After running `docker-compose up --build` and waiting for everything to load, op
 You can see the test running on both the web ui and docker compose CLI.
 
 Then you can see the final coupon information on the logs. Go to the logs tab and refresh the website. You should only see 1 ids at `claimed_by`
+
+## Architecture Notes
+
+DB uses PostgreSQL with Gorm. Core tables are:
+
+- Users
+- Coupons
+- Coupon Claims
+
+Locking strategy uses Redis distributed lock per coupon name, and also Database level pessimistic lock.
+
+Redis lock ensures each coupon name is processed one by one, while database level lock further ensures coupon being processed one by one and also ensures validations are processed correctly with minimum race condition.
